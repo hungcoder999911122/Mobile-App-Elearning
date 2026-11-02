@@ -1,4 +1,4 @@
-package com.example.bai01.screen
+package com.example.bai01.ui.screens.onboarding
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background

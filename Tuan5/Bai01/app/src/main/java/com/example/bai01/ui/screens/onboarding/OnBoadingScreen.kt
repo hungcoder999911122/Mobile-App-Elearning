@@ -1,4 +1,4 @@
-package com.example.bai01.screen
+package com.example.bai01.ui.screens.onboarding
 
 
 import androidx.compose.foundation.Image
@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -45,13 +44,12 @@ data class OnboardingPage(
     val buttonText: String
 )
 
-
-    @Composable
-    fun OnboardingContent(
-        page: OnboardingPage,
-        onSkipClicked: () -> Unit,
-        onNextClicked: () -> Unit
-    ){
+@Composable
+fun OnboardingContent(
+    page: OnboardingPage,
+    onSkipClicked: () -> Unit,
+    onNextClicked: () -> Unit
+) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -149,7 +147,7 @@ data class OnboardingPage(
                     fontWeight = FontWeight.Bold,
                     fontFamily = BeVietnamPro,
                     color = Color(0xFF1E1E1E),
-                    lineHeight = 30.sp,
+                    lineHeight = 30.sp
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -159,7 +157,7 @@ data class OnboardingPage(
                     fontSize = 15.sp,
                     fontFamily = BeVietnamPro,
                     color = Color.Gray,
-                    lineHeight = 22.sp,
+                    lineHeight = 22.sp
                 )
 
                 Spacer (modifier = Modifier.height(16.dp))
