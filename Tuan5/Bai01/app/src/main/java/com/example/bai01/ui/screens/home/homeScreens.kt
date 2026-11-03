@@ -290,9 +290,12 @@ fun ProgressBannerCard(uiState: HomeUiState) {
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = "Bắt đầu từ việc nhỏ nhất nhé.",
+                    // Đọc giá trị từ Firebase Remote Config gửi xuống
+                    text = com.example.bai01.data.repository.RemoteConfigManager.getBannerMessage(),
                     color = Color.White.copy(alpha = 0.9f),
-                    fontSize = 12.sp
+                    fontSize = 12.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
 

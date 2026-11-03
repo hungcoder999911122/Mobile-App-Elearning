@@ -141,6 +141,25 @@ fun ProfileScreenContent(
                 LogoutButton(onLogoutClick = onLogoutClick)
             }
 
+            item { Spacer(modifier = Modifier.height(12.dp)) }
+            // 👉 Nút thử nghiệm Crashlytics cho môn học
+            item {
+                Button(
+                    onClick = {
+                        // Cố tình ném ra ngoại lệ RuntimeException để gây crash app
+                        throw RuntimeException("Test Crashlytics thành công từ UTH Todo!")
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF1F5F9))
+                ) {
+                    Text(
+                        text = "⚠️ Thử nghiệm Crashlytics (Gây sập app)",
+                        color = Color.DarkGray,
+                        fontSize = 13.sp
+                    )
+                }
+            }
+
             item { Spacer(modifier = Modifier.height(32.dp)) }
         }
     }
