@@ -70,7 +70,16 @@ class HomeViewModel(
      * Xử lý khi người dùng tích chọn hoàn thành công việc
      */
     fun onToggleTask(taskId: String) {
+        val currentTask = _uiState.value.tasks.find { it.id == taskId }
+        val newDone = if (currentTask != null) !currentTask.isCompleted else true
+
+        // Cập nhật UI ngay lập tức
         _uiState.update { it.toggleTask(taskId) }
+
+        // Gọi PATCH lên server và đồng bộ repository
+        viewModelScope.launch {
+            repository.updateTaskDone(taskId, newDone)
+        }
     }
 
     /**

@@ -60,7 +60,8 @@ fun HomeScreen(
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = viewModel(),
     onAddNewTaskClick: () -> Unit = {},
-    onNavigateToProfile: () -> Unit = {}
+    onNavigateToProfile: () -> Unit = {},
+    onTaskClick: (taskId: String, fromScreenName: String) -> Unit = { _, _ -> }
 ) {
     // 1. Lắng nghe StateFlow từ ViewModel và tự động cập nhật UI khi có dữ liệu mới
     val uiState by viewModel.uiState.collectAsState()
@@ -85,6 +86,7 @@ fun HomeScreen(
         },
         onAddNewTaskClick = onAddNewTaskClick,
         onNavigateToProfile = onNavigateToProfile,
+        onTaskClick = onTaskClick,
         onRetryClick = {
             viewModel.fetchTasks()
         }
@@ -105,6 +107,7 @@ fun HomeScreenContent(
     onSelectFilter: (TaskFilterType) -> Unit = {},
     onAddNewTaskClick: () -> Unit,
     onNavigateToProfile: () -> Unit = {},
+    onTaskClick: (taskId: String, fromScreenName: String) -> Unit = { _, _ -> },
     onRetryClick: () -> Unit = {}
 ) {
     // 1. Quản lý trạng thái thông báo phản hồi "Tuyệt, đã xong một việc!" dùng chung cho toàn bộ màn hình
@@ -150,6 +153,7 @@ fun HomeScreenContent(
                         onToggleTask = handleToggleTask,
                         onSearchQueryChange = onSearchQueryChange,
                         onSelectFilter = onSelectFilter,
+                        onTaskClick = { taskId -> onTaskClick(taskId, "Danh sách") },
                         onRetryClick = onRetryClick
                     )
                 }
@@ -274,7 +278,8 @@ fun HomeScreenContent(
                                 items(items = uiState.tasks, key = { it.id }) { task ->
                                     TaskCardItem(
                                         task = task,
-                                        onToggleComplete = { handleToggleTask(task.id) }
+                                        onToggleComplete = { handleToggleTask(task.id) },
+                                        onTaskClick = { onTaskClick(task.id, "Trang chủ") }
                                     )
                                     Spacer(modifier = Modifier.height(12.dp))
                                 }
@@ -604,12 +609,13 @@ fun TaskListHeaderSection(onSeeAllClick: () -> Unit) {
 @Composable
 fun TaskCardItem(
     task: Task,
-    onToggleComplete: () -> Unit
+    onToggleComplete: () -> Unit,
+    onTaskClick: () -> Unit = {}
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onToggleComplete() },
+            .clickable { onTaskClick() },
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
@@ -627,6 +633,7 @@ fun TaskCardItem(
                 tint = if (task.isCompleted) Color(0xFF2F69FE) else Color(0xFFCBD5E1),
                 modifier = Modifier
                     .size(26.dp)
+                    .clip(CircleShape)
                     .clickable { onToggleComplete() }
             )
 

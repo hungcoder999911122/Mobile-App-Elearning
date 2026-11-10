@@ -21,7 +21,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import com.example.bai02.R
 import com.example.bai02.ui.screens.auth.LoginScreen
+import com.example.bai02.ui.screens.detail.DetailScreen
 import com.example.bai02.ui.screens.home.HomeScreen
+import com.example.bai02.ui.screens.home.HomeViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.bai02.ui.screens.onboarding.OnboardingContent
 import com.example.bai02.ui.screens.onboarding.OnboardingPage
 import com.example.bai02.ui.screens.onboarding.StartScreen
@@ -43,6 +46,7 @@ sealed class AppScreen(val route: String) {
     data object Login : AppScreen("login_screen")
     data object Home : AppScreen("home_screen")
     data object Profile : AppScreen("profile_screen")
+    data class Detail(val taskId: String, val fromScreenName: String = "Trang chủ") : AppScreen("detail_screen")
 }
 
 // =========================================================================
@@ -127,6 +131,7 @@ val onboardingPages = listOf(
 @Composable
 fun AppNavigation() {
     val navigator = remember { AppNavigator(AppScreen.Start) }
+    val homeViewModel: HomeViewModel = viewModel()
 
     // Xử lý nút Back vật lý của hệ điều hành Android
     BackHandler(enabled = navigator.canGoBack) {
@@ -194,12 +199,17 @@ fun AppNavigation() {
             // 4. Màn hình Trang chủ (Home)
             AppScreen.Home -> {
                 HomeScreen(
+                    viewModel = homeViewModel,
                     onAddNewTaskClick = {
                         // TODO: Mở dialog hoặc màn hình thêm công việc
                     },
                     onNavigateToProfile = {
                         // Nhấn vào Avatar hoặc Tab Cài đặt -> Mở màn hình Hồ sơ cá nhân
                         navigator.navigateTo(AppScreen.Profile)
+                    },
+                    onTaskClick = { taskId, fromScreenName ->
+                        // Chuyển sang màn hình Chi tiết và lưu vết màn hình nguồn ("Trang chủ" hoặc "Danh sách")
+                        navigator.navigateTo(AppScreen.Detail(taskId = taskId, fromScreenName = fromScreenName))
                     }
                 )
             }
@@ -217,6 +227,26 @@ fun AppNavigation() {
                     onLogoutClick = {
                         // Đăng xuất -> Quay lại màn hình Đăng nhập và dọn sạch stack
                         navigator.navigateAndClear(AppScreen.Login)
+                    }
+                )
+            }
+
+            // 6. Màn hình Chi tiết công việc (Detail)
+            is AppScreen.Detail -> {
+                DetailScreen(
+                    taskId = screen.taskId,
+                    fromScreenName = screen.fromScreenName,
+                    onNavigateBack = {
+                        navigator.popBackStack()
+                    },
+                    onTaskDeleted = {
+                        // Xóa công việc xong -> Quay lại và cập nhật lại danh sách công việc ở Home/List
+                        navigator.popBackStack()
+                        homeViewModel.fetchTasks()
+                    },
+                    onTaskUpdated = {
+                        // Cập nhật công việc xong -> Làm mới danh sách công việc ở Home/List
+                        homeViewModel.fetchTasks()
                     }
                 )
             }

@@ -49,6 +49,7 @@ fun TaskListContent(
     onToggleTask: (String) -> Unit,
     onSearchQueryChange: (String) -> Unit,
     onSelectFilter: (TaskFilterType) -> Unit,
+    onTaskClick: (String) -> Unit = {},
     onRetryClick: () -> Unit
 ) {
     LazyColumn(
@@ -172,7 +173,8 @@ fun TaskListContent(
                     items(items = uiState.todoTasks, key = { it.id }) { task ->
                         TaskListItemCard(
                             task = task,
-                            onToggleComplete = { onToggleTask(task.id) }
+                            onToggleComplete = { onToggleTask(task.id) },
+                            onTaskClick = { onTaskClick(task.id) }
                         )
                         Spacer(modifier = Modifier.height(10.dp))
                     }
@@ -189,7 +191,8 @@ fun TaskListContent(
                     items(items = uiState.completedTasks, key = { it.id }) { task ->
                         TaskListItemCard(
                             task = task,
-                            onToggleComplete = { onToggleTask(task.id) }
+                            onToggleComplete = { onToggleTask(task.id) },
+                            onTaskClick = { onTaskClick(task.id) }
                         )
                         Spacer(modifier = Modifier.height(10.dp))
                     }
@@ -338,12 +341,13 @@ fun TaskSectionTitle(title: String) {
 @Composable
 fun TaskListItemCard(
     task: Task,
-    onToggleComplete: () -> Unit
+    onToggleComplete: () -> Unit,
+    onTaskClick: () -> Unit = {}
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onToggleComplete() },
+            .clickable { onTaskClick() },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
@@ -361,6 +365,7 @@ fun TaskListItemCard(
                 tint = if (task.isCompleted) Color(0xFF2F69FE) else Color(0xFFCBD5E1),
                 modifier = Modifier
                     .size(24.dp)
+                    .clip(CircleShape)
                     .clickable { onToggleComplete() }
             )
 
