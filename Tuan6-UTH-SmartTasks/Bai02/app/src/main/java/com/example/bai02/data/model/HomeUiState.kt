@@ -13,7 +13,9 @@ data class HomeUiState(
     val tasks: List<Task> = emptyList(),
     val selectedTab: HomeTab = HomeTab.HOME,
     val isLoading: Boolean = false,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val searchQuery: String = "",
+    val selectedFilter: TaskFilterType = TaskFilterType.ALL
 ) {
     /**
      * Tổng số lượng công việc (nếu danh sách mẫu có ít hơn 7 thì có thể linh hoạt tính toán).
@@ -54,6 +56,51 @@ data class HomeUiState(
     }
 
     /**
+     * Danh sách công việc sau khi đã lọc qua Bộ lọc danh mục và Từ khóa tìm kiếm.
+     */
+    val filteredTasks: List<Task>
+        get() {
+            return tasks.filter { task ->
+                // 1. Kiểm tra khớp danh mục
+                val matchCategory = when (selectedFilter) {
+                    TaskFilterType.ALL -> true
+                    TaskFilterType.STUDY -> task.belongsTo(TaskCategory.HOC_TAP.id)
+                    TaskFilterType.LIFE -> task.belongsTo(TaskCategory.CUOC_SONG.id)
+                }
+
+                // 2. Kiểm tra khớp từ khóa tìm kiếm (không phân biệt chữ hoa, chữ thường)
+                val matchQuery = if (searchQuery.isBlank()) {
+                    true
+                } else {
+                    task.title.contains(searchQuery.trim(), ignoreCase = true)
+                }
+
+                matchCategory && matchQuery
+            }
+        }
+
+    /**
+     * Danh sách công việc CẦN LÀM (chưa hoàn thành) sau khi đã lọc.
+     */
+    val todoTasks: List<Task>
+        get() = filteredTasks.filter { !it.isCompleted }
+
+    /**
+     * Danh sách công việc ĐÃ XONG (đã hoàn thành) sau khi đã lọc.
+     */
+    val completedTasks: List<Task>
+        get() = filteredTasks.filter { it.isCompleted }
+
+    /**
+     * Chuỗi thống kê số lượng việc chưa xong hiển thị trên Header (ví dụ: "4 việc chưa xong").
+     */
+    val uncompletedCountText: String
+        get() {
+            val count = tasks.count { !it.isCompleted }
+            return "$count việc chưa xong"
+        }
+
+    /**
      * Đảo trạng thái hoàn thành của một công việc theo id.
      * Trả về một đối tượng HomeUiState mới với danh sách đã cập nhật.
      */
@@ -69,6 +116,20 @@ data class HomeUiState(
      */
     fun selectTab(tab: HomeTab): HomeUiState {
         return this.copy(selectedTab = tab)
+    }
+
+    /**
+     * Cập nhật từ khóa tìm kiếm.
+     */
+    fun updateSearchQuery(query: String): HomeUiState {
+        return this.copy(searchQuery = query)
+    }
+
+    /**
+     * Cập nhật bộ lọc danh mục.
+     */
+    fun updateFilter(filter: TaskFilterType): HomeUiState {
+        return this.copy(selectedFilter = filter)
     }
 }
 

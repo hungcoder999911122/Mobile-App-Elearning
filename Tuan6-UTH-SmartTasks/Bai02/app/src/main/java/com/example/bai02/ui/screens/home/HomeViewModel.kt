@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.bai02.data.model.HomeTab
 import com.example.bai02.data.model.HomeUiState
+import com.example.bai02.data.model.TaskFilterType
 import com.example.bai02.data.repository.NetworkTaskRepository
 import com.example.bai02.data.repository.TaskRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -77,6 +78,20 @@ class HomeViewModel(
      */
     fun onSelectTab(tab: HomeTab) {
         _uiState.update { it.selectTab(tab) }
+    }
+
+    /**
+     * Xử lý khi người dùng nhập từ khóa tìm kiếm
+     */
+    fun onSearchQueryChange(query: String) {
+        _uiState.update { it.updateSearchQuery(query) }
+    }
+
+    /**
+     * Xử lý khi người dùng chọn chip lọc danh mục
+     */
+    fun onSelectFilter(filter: TaskFilterType) {
+        _uiState.update { it.updateFilter(filter) }
     }
 }
 

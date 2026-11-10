@@ -12,7 +12,7 @@ data class TaskDto(
     @SerializedName("title")
     val title: String,
 
-    @SerializedName("des")
+    @SerializedName(value = "des", alternate = ["note"])
     val des: String? = null,
 
     @SerializedName("category")
@@ -42,17 +42,22 @@ data class TaskDto(
  * Chuyển đổi một đối tượng TaskDto nhận từ API thành đối tượng Task dùng cho giao diện Compose.
  */
 fun TaskDto.toDomainTask(): Task {
-    // Nhận diện danh mục từ chuỗi string trả về từ server
+    // 1. Nhận diện danh mục từ chuỗi string trả về từ server
     val domainCategory = when (this.category.trim().lowercase()) {
         "study", "học tập" -> TaskCategory.HOC_TAP
         else -> TaskCategory.CUOC_SONG
     }
+
+    // 2. Nhận diện công việc gấp (priority = high/urgent/gấp)
+    val isUrgent = this.priority?.trim()?.lowercase() in listOf("high", "urgent", "gấp", "gap")
 
     return Task(
         id = this.id.toString(),
         title = this.title,
         category = domainCategory,
         time = this.time,
+        date = this.date,
+        isUrgent = isUrgent,
         isCompleted = this.done
     )
 }

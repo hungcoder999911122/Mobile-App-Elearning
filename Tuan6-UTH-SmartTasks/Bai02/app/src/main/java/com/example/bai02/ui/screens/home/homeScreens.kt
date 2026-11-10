@@ -1,5 +1,12 @@
 package com.example.bai02.ui.screens.home
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -27,14 +34,18 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import com.example.bai02.data.model.HomeTab
 import com.example.bai02.data.model.HomeUiState
 import com.example.bai02.data.model.Task
 import com.example.bai02.data.model.TaskCategory
+import com.example.bai02.data.model.TaskFilterType
 import com.example.bai02.data.model.UserProfile
 import com.example.bai02.data.repository.FakeTaskRepository
 import com.example.bai02.data.repository.TaskRepository
+import com.example.bai02.ui.screens.tasks.TaskListContent
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.delay
 /**
  * =========================================================================
  * MÀN HÌNH CHÍNH (HomeScreen)
@@ -66,6 +77,12 @@ fun HomeScreen(
                 viewModel.onSelectTab(selectedTab)
             }
         },
+        onSearchQueryChange = { query ->
+            viewModel.onSearchQueryChange(query)
+        },
+        onSelectFilter = { filter ->
+            viewModel.onSelectFilter(filter)
+        },
         onAddNewTaskClick = onAddNewTaskClick,
         onNavigateToProfile = onNavigateToProfile,
         onRetryClick = {
@@ -84,148 +101,230 @@ fun HomeScreenContent(
     modifier: Modifier = Modifier,
     onToggleTask: (String) -> Unit,
     onSelectTab: (HomeTab) -> Unit,
+    onSearchQueryChange: (String) -> Unit = {},
+    onSelectFilter: (TaskFilterType) -> Unit = {},
     onAddNewTaskClick: () -> Unit,
     onNavigateToProfile: () -> Unit = {},
     onRetryClick: () -> Unit = {}
 ) {
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        containerColor = Color(0xFFF8F9FD),
-        bottomBar = {
-            CustomBottomBar(
-                selectedTab = uiState.selectedTab,
-                onTabSelected = onSelectTab,
-                onAddClick = onAddNewTaskClick
-            )
+    // 1. Quản lý trạng thái thông báo phản hồi "Tuyệt, đã xong một việc!" dùng chung cho toàn bộ màn hình
+    var toastTrigger by remember { mutableIntStateOf(0) }
+    var showCompletionToast by remember { mutableStateOf(false) }
+
+    // 2. Coroutine tự động đếm ngược 2 giây rồi ẩn thông báo
+    LaunchedEffect(toastTrigger) {
+        if (toastTrigger > 0) {
+            showCompletionToast = true
+            delay(2000L)
+            showCompletionToast = false
         }
-    ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(horizontal = 20.dp)
-        ) {
-            item { Spacer(modifier = Modifier.height(16.dp)) }
+    }
 
-            // 1. Header (Avatar MA + Lời chào người dùng + Thông báo có badge)
-            item {
-                TopHeaderSection(
-                    user = uiState.user,
-                    dateText = uiState.dateText,
-                    hasUnreadNotifications = uiState.hasUnreadNotifications,
-                    onAvatarClick = onNavigateToProfile
+    // 3. Hàm bọc sự kiện hoàn thành task: nếu việc chưa hoàn thành thì kích hoạt Toast
+    val handleToggleTask: (String) -> Unit = { taskId ->
+        val task = uiState.tasks.find { it.id == taskId }
+        if (task != null && !task.isCompleted) {
+            toastTrigger++
+        }
+        onToggleTask(taskId)
+    }
+
+    Box(modifier = modifier.fillMaxSize()) {
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            containerColor = Color(0xFFF8F9FD),
+            bottomBar = {
+                CustomBottomBar(
+                    selectedTab = uiState.selectedTab,
+                    onTabSelected = onSelectTab,
+                    onAddClick = onAddNewTaskClick
                 )
             }
+        ) { paddingValues ->
+            when (uiState.selectedTab) {
+                HomeTab.TASKS -> {
+                    // Hiển thị màn hình Danh sách khi người dùng chọn tab TASKS ("Danh sách")
+                    TaskListContent(
+                        uiState = uiState,
+                        modifier = Modifier.padding(paddingValues),
+                        onToggleTask = handleToggleTask,
+                        onSearchQueryChange = onSearchQueryChange,
+                        onSelectFilter = onSelectFilter,
+                        onRetryClick = onRetryClick
+                    )
+                }
+                else -> {
+                    // Hiển thị màn hình Trang chủ cho tab HOME và các tab mặc định
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(paddingValues)
+                            .padding(horizontal = 20.dp)
+                    ) {
+                        item { Spacer(modifier = Modifier.height(16.dp)) }
 
-            item { Spacer(modifier = Modifier.height(20.dp)) }
-
-            // 2. Card Tiến độ hôm nay (Circular Donut Chart tính toán tự động bằng OOP)
-            item {
-                ProgressBannerCard(uiState = uiState)
-            }
-
-            item { Spacer(modifier = Modifier.height(20.dp)) }
-
-            // 3. Danh mục công việc (Số việc còn lại tự động tính qua hàm getRemainingTasksCount)
-            item {
-                CategoriesSection(
-                    categories = uiState.categories,
-                    getRemainingCount = { category -> uiState.getRemainingTasksCount(category) }
-                )
-            }
-
-            item { Spacer(modifier = Modifier.height(24.dp)) }
-
-            // 4. Tiêu đề danh sách: "Việc hôm nay" - "Xem tất cả"
-            item {
-                TaskListHeaderSection(
-                    onSeeAllClick = { /* TODO: Điều hướng sang màn hình xem tất cả */ }
-                )
-            }
-
-            item { Spacer(modifier = Modifier.height(14.dp)) }
-
-            // 5. XỬ LÝ 4 TRẠNG THÁI HIỂN THỊ DANH SÁCH:
-            when {
-                // TRẠNG THÁI 1: ĐANG TẢI DỮ LIỆU TỪ API (LOADING)
-                uiState.isLoading -> {
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 40.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator(
-                                color = Color(0xFF2F69FE),
-                                strokeWidth = 3.dp
+                        // 1. Header (Avatar MA + Lời chào người dùng + Thông báo có badge)
+                        item {
+                            TopHeaderSection(
+                                user = uiState.user,
+                                dateText = uiState.dateText,
+                                hasUnreadNotifications = uiState.hasUnreadNotifications,
+                                onAvatarClick = onNavigateToProfile
                             )
                         }
-                    }
-                }
-                // TRẠNG THÁI 2: XẢY RA LỖI (ERROR - HTTP 500, MẤT MẠNG...)
-                uiState.errorMessage != null -> {
-                    item {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 24.dp)
-                                .background(Color(0xFFFFF0F0), RoundedCornerShape(12.dp))
-                                .padding(16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = "Không thể tải danh sách công việc!",
-                                color = Color(0xFFD32F2F),
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 15.sp
+
+                        item { Spacer(modifier = Modifier.height(20.dp)) }
+
+                        // 2. Card Tiến độ hôm nay (Circular Donut Chart tính toán tự động bằng OOP)
+                        item {
+                            ProgressBannerCard(uiState = uiState)
+                        }
+
+                        item { Spacer(modifier = Modifier.height(20.dp)) }
+
+                        // 3. Danh mục công việc (Số việc còn lại tự động tính qua hàm getRemainingTasksCount)
+                        item {
+                            CategoriesSection(
+                                categories = uiState.categories,
+                                getRemainingCount = { category -> uiState.getRemainingTasksCount(category) }
                             )
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text(
-                                text = uiState.errorMessage ?: "",
-                                color = Color.Gray,
-                                fontSize = 13.sp
+                        }
+
+                        item { Spacer(modifier = Modifier.height(24.dp)) }
+
+                        // 4. Tiêu đề danh sách: "Việc hôm nay" - "Xem tất cả" (bấm xem tất cả chuyển sang tab Danh sách)
+                        item {
+                            TaskListHeaderSection(
+                                onSeeAllClick = { onSelectTab(HomeTab.TASKS) }
                             )
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Button(
-                                onClick = onRetryClick,
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2F69FE))
-                            ) {
-                                Text("Thử lại")
+                        }
+
+                        item { Spacer(modifier = Modifier.height(14.dp)) }
+
+                        // 5. XỬ LÝ 4 TRẠNG THÁI HIỂN THỊ DANH SÁCH:
+                        when {
+                            // TRẠNG THÁI 1: ĐANG TẢI DỮ LIỆU TỪ API (LOADING)
+                            uiState.isLoading -> {
+                                item {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 40.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        CircularProgressIndicator(
+                                            color = Color(0xFF2F69FE),
+                                            strokeWidth = 3.dp
+                                        )
+                                    }
+                                }
+                            }
+                            // TRẠNG THÁI 2: XẢY RA LỖI (ERROR - HTTP 500, MẤT MẠNG...)
+                            uiState.errorMessage != null -> {
+                                item {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 24.dp)
+                                            .background(Color(0xFFFFF0F0), RoundedCornerShape(12.dp))
+                                            .padding(16.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Text(
+                                            text = "Không thể tải danh sách công việc!",
+                                            color = Color(0xFFD32F2F),
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 15.sp
+                                        )
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                        Text(
+                                            text = uiState.errorMessage ?: "",
+                                            color = Color.Gray,
+                                            fontSize = 13.sp
+                                        )
+                                        Spacer(modifier = Modifier.height(12.dp))
+                                        Button(
+                                            onClick = onRetryClick,
+                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2F69FE))
+                                        ) {
+                                            Text("Thử lại")
+                                        }
+                                    }
+                                }
+                            }
+                            // TRẠNG THÁI 3: DANH SÁCH RỖNG (EMPTY)
+                            uiState.tasks.isEmpty() -> {
+                                item {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 30.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = "Hôm nay bạn không có công việc nào!",
+                                            color = Color.Gray,
+                                            fontSize = 14.sp
+                                        )
+                                    }
+                                }
+                            }
+                            // TRẠNG THÁI 4: HIỂN THỊ DANH SÁCH THÀNH CÔNG TỪ API (SUCCESS)
+                            else -> {
+                                items(items = uiState.tasks, key = { it.id }) { task ->
+                                    TaskCardItem(
+                                        task = task,
+                                        onToggleComplete = { handleToggleTask(task.id) }
+                                    )
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                }
                             }
                         }
-                    }
-                }
-                // TRẠNG THÁI 3: DANH SÁCH RỖNG (EMPTY)
-                uiState.tasks.isEmpty() -> {
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 30.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "Hôm nay bạn không có công việc nào!",
-                                color = Color.Gray,
-                                fontSize = 14.sp
-                            )
-                        }
-                    }
-                }
-                // TRẠNG THÁI 4: HIỂN THỊ DANH SÁCH THÀNH CÔNG TỪ API (SUCCESS)
-                else -> {
-                    items(items = uiState.tasks, key = { it.id }) { task ->
-                        TaskCardItem(
-                            task = task,
-                            onToggleComplete = { onToggleTask(task.id) }
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
+                        // Khoảng đệm phía cuối danh sách
+                        item { Spacer(modifier = Modifier.height(30.dp)) }
                     }
                 }
             }
-            // Khoảng đệm phía cuối danh sách
-            item { Spacer(modifier = Modifier.height(30.dp)) }
+        }
+
+        // =========================================================================
+        // VIÊN THUỐC THÔNG BÁO NỔI PHÍA TRÊN DÙNG CHUNG: "Tuyệt, đã xong một việc!"
+        // =========================================================================
+        AnimatedVisibility(
+            visible = showCompletionToast,
+            enter = slideInVertically(
+                initialOffsetY = { -it },
+                animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
+            ) + fadeIn(animationSpec = tween(300)),
+            exit = slideOutVertically(
+                targetOffsetY = { -it },
+                animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing)
+            ) + fadeOut(animationSpec = tween(250)),
+            modifier = Modifier
+                .statusBarsPadding()
+                .align(Alignment.TopCenter)
+                .offset(y = 12.dp)
+                .zIndex(99f)
+        ) {
+            Box(
+                modifier = Modifier
+                    .shadow(
+                        elevation = 12.dp,
+                        shape = CircleShape,
+                        spotColor = Color(0x66000000)
+                    )
+                    .clip(CircleShape)
+                    .background(Color(0xFF22262B))
+                    .padding(horizontal = 22.dp, vertical = 11.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Tuyệt, đã xong một việc!",
+                    color = Color.White,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
         }
     }
 }
@@ -562,13 +661,31 @@ fun TaskCardItem(
 
                     Spacer(modifier = Modifier.width(8.dp))
 
-                    // Giờ thực hiện
+                    // Giờ hoặc Ngày/Giờ thực hiện
                     Text(
-                        text = task.time,
+                        text = task.formattedDateTime,
                         fontSize = 12.sp,
                         color = Color(0xFF94A3B8)
                     )
                 }
+            }
+
+            // Nhãn "Gấp" nếu công việc có mức độ ưu tiên cao
+            if (task.isUrgent && !task.isCompleted) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(Color(0xFFFFEBEB))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = "Gấp",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFEF4444)
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
             }
 
             // Mũi tên góc phải

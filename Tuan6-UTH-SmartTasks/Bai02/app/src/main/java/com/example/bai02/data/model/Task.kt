@@ -9,8 +9,22 @@ data class Task(
     val title: String,
     val category: TaskCategory,
     val time: String,
+    val date: String? = null,
+    val isUrgent: Boolean = false,
     val isCompleted: Boolean = false
 ) {
+    /**
+     * Thuộc tính tiện ích ghép ngày và giờ hiển thị trên giao diện thẻ công việc.
+     * Ví dụ: "Hôm nay, 14:00" hoặc "2026-10-28, 09:00" hoặc chỉ "14:00" nếu không có ngày.
+     */
+    val formattedDateTime: String
+        get() {
+            return if (!date.isNullOrBlank()) {
+                "$date, $time"
+            } else {
+                time
+            }
+        }
     /**
      * Phương thức đóng gói hành vi (Encapsulation):
      * Trả về một bản sao mới với trạng thái hoàn thành được đảo ngược (Immutable Object Pattern).

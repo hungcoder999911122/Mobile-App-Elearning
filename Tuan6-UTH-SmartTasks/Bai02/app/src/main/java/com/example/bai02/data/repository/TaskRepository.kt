@@ -64,13 +64,12 @@ class FakeTaskRepository : TaskRepository {
         val catCuocSong = TaskCategory.CUOC_SONG
 
         val initialTasks = listOf(
-            Task("1", "Nộp bài tập Lập trình di động", catHocTap, "09:00", isCompleted = true),
-            Task("2", "Ôn chương 3 – Cấu trúc dữ liệu", catHocTap, "14:00", isCompleted = false),
-            Task("3", "Đi chợ mua đồ cho tuần", catCuocSong, "17:30", isCompleted = false),
-            Task("4", "Tập thể dục 30 phút", catCuocSong, "06:30", isCompleted = true),
-            Task("5", "Làm bài tập trắc nghiệm", catHocTap, "16:00", isCompleted = false),
-            Task("6", "Đọc sách 20 trang", catHocTap, "21:00", isCompleted = false),
-            Task("7", "Dọn dẹp góc học tập", catHocTap, "22:00", isCompleted = false)
+            Task("1", "Ôn chương 3 – Cấu trúc dữ liệu", catHocTap, "14:00", date = "Hôm nay", isCompleted = false),
+            Task("2", "Đi chợ mua đồ cho tuần", catCuocSong, "17:30", date = "Hôm nay", isCompleted = false),
+            Task("3", "Gọi điện về nhà", catCuocSong, "21:00", date = "Ngày mai", isCompleted = false),
+            Task("4", "Họp nhóm đồ án", catHocTap, "20:00", date = "Tuần này", isUrgent = true, isCompleted = false),
+            Task("5", "Tập thể dục 30 phút", catCuocSong, "06:30", date = "Hôm nay", isCompleted = true),
+            Task("6", "Nộp bài tập Lập trình di động", catHocTap, "09:00", date = "Hôm nay", isCompleted = true)
         )
 
         return HomeUiState(
