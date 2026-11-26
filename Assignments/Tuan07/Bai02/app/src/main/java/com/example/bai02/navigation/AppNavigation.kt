@@ -21,6 +21,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import com.example.bai02.R
 import com.example.bai02.ui.screens.auth.LoginScreen
+import com.example.bai02.ui.screens.create.CreateTaskScreen
 import com.example.bai02.ui.screens.detail.DetailScreen
 import com.example.bai02.ui.screens.home.HomeScreen
 import com.example.bai02.ui.screens.home.HomeViewModel
@@ -45,6 +46,7 @@ sealed class AppScreen(val route: String) {
     data object Onboarding : AppScreen("onboarding_screen")
     data object Login : AppScreen("login_screen")
     data object Home : AppScreen("home_screen")
+    data object CreateTask : AppScreen("create_task_screen")
     data object Profile : AppScreen("profile_screen")
     data class Detail(val taskId: String, val fromScreenName: String = "Trang chủ") : AppScreen("detail_screen")
 }
@@ -201,7 +203,7 @@ fun AppNavigation() {
                 HomeScreen(
                     viewModel = homeViewModel,
                     onAddNewTaskClick = {
-                        // TODO: Mở dialog hoặc màn hình thêm công việc
+                        navigator.navigateTo(AppScreen.CreateTask)
                     },
                     onNavigateToProfile = {
                         // Nhấn vào Avatar hoặc Tab Cài đặt -> Mở màn hình Hồ sơ cá nhân
@@ -214,7 +216,20 @@ fun AppNavigation() {
                 )
             }
 
-            // 5. Màn hình Hồ sơ cá nhân (Profile)
+            // 5. Màn hình Tạo công việc mới (CreateTask)
+            AppScreen.CreateTask -> {
+                CreateTaskScreen(
+                    onNavigateBack = {
+                        navigator.popBackStack()
+                    },
+                    onTaskCreated = {
+                        navigator.popBackStack()
+                        homeViewModel.fetchTasks()
+                    }
+                )
+            }
+
+            // 6. Màn hình Hồ sơ cá nhân (Profile)
             AppScreen.Profile -> {
                 ProfileScreen(
                     onNavigateBackToSettings = {

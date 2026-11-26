@@ -10,6 +10,7 @@ import com.example.bai02.data.model.UserProfile
 import com.example.bai02.data.model.toDomainTask
 import com.example.bai02.data.network.RetrofitClient
 import com.example.bai02.data.network.TaskApiService
+import retrofit2.HttpException
 
 /**
  * Interface Repository (OOP - Tính trừu tượng Abstraction & Dependency Inversion trong SOLID).
@@ -134,8 +135,16 @@ class NetworkTaskRepository(
 
     override suspend fun createTask(request: CreateTaskRequest): Result<Task> {
         return try {
-            val responseDto = apiService.createTask(request)
-            val createdTask = responseDto.toDomainTask()
+            // 1. Gửi request POST thật lên server
+            val response = apiService.createTask(request)
+            if (!response.isSuccessful) {
+                return Result.failure(HttpException(response))
+            }
+
+            // 2. Vì server Mock không lưu DB thật và có thể trả về dữ liệu tĩnh/trùng ID,
+            // ta tạo Task từ chính dữ liệu người dùng nhập với ID duy nhất và lưu vào cache.
+            val nextId = generateUniqueTaskId()
+            val createdTask = request.toDomainTask(id = nextId)
             cachedTasks.add(0, createdTask)
             Result.success(createdTask)
         } catch (e: Exception) {
@@ -143,32 +152,13 @@ class NetworkTaskRepository(
         }
     }
 
-    override suspend fun createTask(request: CreateTaskRequest): Result<Task> {
-        val category = when (request.category.trim().lowercase()) {
-            "study", "học tập" -> TaskCategory.HOC_TAP
-            else -> TaskCategory.CUOC_SONG
+    private fun generateUniqueTaskId(): String {
+        val maxNumericId = cachedTasks.mapNotNull { it.id.toIntOrNull() }.maxOrNull() ?: 0
+        var candidate = maxNumericId + 1
+        while (cachedTasks.any { it.id == candidate.toString() }) {
+            candidate++
         }
-        val priorityLower = request.priority.trim().lowercase()
-        val isUrgent = priorityLower in listOf("high", "urgent", "gấp", "gap")
-        val priorityDisplay = when {
-            isUrgent -> "Ưu tiên cao"
-            priorityLower in listOf("low", "thấp", "thap") -> "Ưu tiên thấp"
-            else -> "Ưu tiên vừa"
-        }
-        val newTask = Task(
-            id = (fakeTasks.size + 1).toString(),
-            title = request.title,
-            category = category,
-            time = request.time,
-            date = request.date,
-            isUrgent = isUrgent,
-            isCompleted = request.done,
-            note = request.des,
-            priorityText = priorityDisplay,
-            remindText = if (request.remind) "Trước 15 phút" else "Không nhắc"
-        )
-        fakeTasks.add(0, newTask)
-        return Result.success(newTask)
+        return candidate.toString()
     }
 
     override suspend fun updateTaskDone(id: String, isDone: Boolean): Result<Task> {
@@ -306,40 +296,8 @@ class FakeTaskRepository : TaskRepository {
     }
 
     override suspend fun createTask(request: CreateTaskRequest): Result<Task> {
-        return try {
-            val responseDto = apiService.createTask(request)
-            val createdTask = responseDto.toDomainTask()
-            cachedTasks.add(0, createdTask)
-            Result.success(createdTask)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
-    override suspend fun createTask(request: CreateTaskRequest): Result<Task> {
-        val category = when (request.category.trim().lowercase()) {
-            "study", "học tập" -> TaskCategory.HOC_TAP
-            else -> TaskCategory.CUOC_SONG
-        }
-        val priorityLower = request.priority.trim().lowercase()
-        val isUrgent = priorityLower in listOf("high", "urgent", "gấp", "gap")
-        val priorityDisplay = when {
-            isUrgent -> "Ưu tiên cao"
-            priorityLower in listOf("low", "thấp", "thap") -> "Ưu tiên thấp"
-            else -> "Ưu tiên vừa"
-        }
-        val newTask = Task(
-            id = (fakeTasks.size + 1).toString(),
-            title = request.title,
-            category = category,
-            time = request.time,
-            date = request.date,
-            isUrgent = isUrgent,
-            isCompleted = request.done,
-            note = request.des,
-            priorityText = priorityDisplay,
-            remindText = if (request.remind) "Trước 15 phút" else "Không nhắc"
-        )
+        val nextId = ((fakeTasks.mapNotNull { it.id.toIntOrNull() }.maxOrNull() ?: 0) + 1).toString()
+        val newTask = request.toDomainTask(id = nextId)
         fakeTasks.add(0, newTask)
         return Result.success(newTask)
     }

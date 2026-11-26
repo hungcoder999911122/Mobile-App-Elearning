@@ -2,6 +2,7 @@ package com.example.bai02.data.network
 
 import com.example.bai02.data.model.CreateTaskRequest
 import com.example.bai02.data.model.TaskDto
+import okhttp3.ResponseBody
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
@@ -44,7 +45,7 @@ interface TaskApiService {
     @POST("mock/teach/tasks")
     suspend fun createTask(
         @Body request: CreateTaskRequest
-    ): TaskDto
+    ): Response<ResponseBody>
 
     /**
      * Cập nhật một phần thông tin công việc theo ID

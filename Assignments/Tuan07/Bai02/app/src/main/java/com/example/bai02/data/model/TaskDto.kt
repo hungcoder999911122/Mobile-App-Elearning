@@ -101,6 +101,38 @@ data class UpdateTaskRequest(
 )
 
 /**
+ * Chuyển đổi [CreateTaskRequest] thành domain [Task] để đồng bộ ngay vào bộ nhớ đệm (cache)
+ * khi làm việc với Mock Server không lưu trữ database thật.
+ */
+fun CreateTaskRequest.toDomainTask(id: String): Task {
+    val domainCategory = when (this.category.trim().lowercase()) {
+        "study", "học tập" -> TaskCategory.HOC_TAP
+        else -> TaskCategory.CUOC_SONG
+    }
+
+    val priorityLower = this.priority.trim().lowercase()
+    val isUrgent = priorityLower in listOf("high", "urgent", "gấp", "gap")
+    val priorityDisplay = when {
+        isUrgent -> "Ưu tiên cao"
+        priorityLower in listOf("low", "thấp", "thap") -> "Ưu tiên thấp"
+        else -> "Ưu tiên vừa"
+    }
+
+    return Task(
+        id = id,
+        title = this.title,
+        category = domainCategory,
+        time = this.time,
+        date = this.date,
+        isUrgent = isUrgent,
+        isCompleted = this.done,
+        note = this.des,
+        priorityText = priorityDisplay,
+        remindText = if (this.remind) "Trước 15 phút" else "Không nhắc"
+    )
+}
+
+/**
  * 2. HÀM MAPPER (Extension Function):
  * Chuyển đổi một đối tượng TaskDto nhận từ API thành đối tượng Task dùng cho giao diện Compose.
  */
