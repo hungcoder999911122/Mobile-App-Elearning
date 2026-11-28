@@ -2,6 +2,7 @@ package com.example.bai02.data.repository
 
 import com.example.bai02.data.model.HomeUiState
 import com.example.bai02.data.model.Subtask
+import com.example.bai02.data.model.SubtaskDto
 import com.example.bai02.data.model.Task
 import com.example.bai02.data.model.TaskCategory
 import com.example.bai02.data.model.UserProfile
@@ -153,10 +154,10 @@ class NetworkTaskRepository(
                 }
                 if (fields.containsKey("subtasks")) {
                     @Suppress("UNCHECKED_CAST")
-                    val subDtoList = fields["subtasks"] as? List<com.example.bai02.data.model.SubtaskDto>
+                    val subDtoList = fields["subtasks"] as? List<SubtaskDto>
                     if (subDtoList != null) {
                         task = task.copy(subtasks = subDtoList.mapIndexed { idx, s ->
-                            com.example.bai02.data.model.Subtask(
+                            Subtask(
                                 id = s.id?.toString() ?: idx.toString(),
                                 title = s.title ?: "",
                                 isCompleted = s.done == true
